@@ -2,7 +2,7 @@
 'use server';
 
 import { getAuth } from 'firebase-admin/auth';
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { ServiceAccount } from 'firebase-admin';
 
@@ -18,11 +18,7 @@ const serviceAccount: ServiceAccount = {
 let adminApp: App;
 if (!getApps().length) {
   adminApp = initializeApp({
-    credential: {
-      projectId: serviceAccount.projectId,
-      privateKey: serviceAccount.privateKey,
-      clientEmail: serviceAccount.clientEmail,
-    }
+    credential: cert(serviceAccount)
   });
 } else {
   adminApp = getApps()[0];
