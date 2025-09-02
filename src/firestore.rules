@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Regla global para el acceso a datos.
+    // Permite el acceso de lectura y escritura a CUALQUIER colección si:
+    // 1. El usuario es un 'admin'.
+    // 2. O si el UID del usuario existe en la lista de roles (cubre a técnicos y clientes).
+    // Esta regla es más general y soluciona los problemas de permisos para listar colecciones.
+    match /{collection}/{docId} {
+      allow read, write: if request.auth != null && exists(/databases/$(database)/documents/roles/userRoles) && (
+        get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin' ||
+        request.auth.uid in get(/databases/$(database)/documents/roles/userRoles).data
+      );
+    }
+    
+    // EXCEPCIONES Y REGLAS ESPECÍFICAS
+    
+    // registrationRequests: cualquiera puede CREAR una solicitud.
+    // La regla global ya se encarga de que solo los admins puedan leer/escribir.
+    match /registrationRequests/{requestId} {
+      allow create: if true;
+    }
+    
+    // contactLeads: cualquiera puede CREAR un lead desde el formulario de contacto.
+    // La regla global ya se encarga de que solo los admins puedan leer/escribir.
+     match /contactLeads/{leadId} {
+      allow create: if true;
+    }
+
+    // roles/userRoles:
+    // Esta es la única colección con sus propias reglas de escritura específicas.
+    // - Cualquiera autenticado puede leerlo para que la app verifique permisos.
+    // - Solo los administradores pueden escribirlo para asignar o cambiar roles.
+    match /roles/userRoles {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+  }
+}

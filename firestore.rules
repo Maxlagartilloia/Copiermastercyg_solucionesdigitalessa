@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- REGLAS GENERALES DE ACCESO ---
+    // Permite que un usuario autenticado pueda leer su propio rol.
+    // ESTA ES LA REGLA MÁS IMPORTANTE PARA SOLUCIONAR EL LOGIN.
+    match /roles/userRoles {
+      allow get: if request.auth != null;
+      // Solo los administradores pueden modificar la lista de roles.
+      allow write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+
+    // --- REGLAS PARA ADMINISTRADORES ---
+    // Un administrador puede leer y escribir en estas colecciones.
+    // 'read' y 'write' son permisos generales que incluyen listar, obtener, crear, actualizar y borrar.
+    match /clients/{doc=**} {
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+    match /technicians/{doc=**} {
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+    match /supportRequests/{doc=**} {
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+    match /registrationRequests/{doc=**} {
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+     match /contactLeads/{doc=**} {
+       allow read, write: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'admin';
+    }
+
+    // --- REGLAS PARA CLIENTES ---
+    // Un cliente puede crear tickets de soporte.
+    match /supportRequests/{ticketId} {
+      allow create: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'client';
+      // Un cliente puede leer un ticket si su email coincide con el del ticket.
+      allow get: if request.auth != null && get(/databases/$(database)/documents/roles/userRoles).data[request.auth.uid] == 'client' && resource.data.email == request.auth.token.email;
+    }
+
+    // --- REGLAS PÚBLICAS ---
+    // Cualquiera (incluso sin autenticar) puede crear una solicitud de registro o un lead de contacto.
+    match /registrationRequests/{requestId} {
+      allow create: if true;
+    }
+     match /contactLeads/{leadId} {
+      allow create: if true;
+    }
+  }
+}
